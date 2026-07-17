@@ -45,3 +45,4 @@ app.*.map.json
 .vscode
 /docs-new/
 /scratchpad/
+/flutter/

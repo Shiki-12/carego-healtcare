@@ -1,49 +1,52 @@
-import 'package:flutter/widgets.dart';
-
 import 'api_service.dart';
 import 'env.dart';
 import 'token_store.dart';
 import '../services/auth_service.dart';
-import '../services/bookings_service.dart';
-import '../services/catalog_service.dart';
+import '../services/caregiver_service.dart';
+import '../services/rental_service.dart';
+import '../services/order_service.dart';
 import '../services/chat_service.dart';
-import '../services/notifications_service.dart';
+import '../services/notification_service.dart';
 import '../services/wallet_service.dart';
 
-/// Composition root sederhana (doc 08 §9) — satu instance [ApiService]
-/// dipakai seragam semua layar/service, tanpa dependency injection berat
-/// (pola setState prototipe dipertahankan, ADR-005).
+/// Service locator sederhana (singleton global) untuk app customer.
+///
+/// Diinisialisasi sekali di main() sebelum runApp. Menyediakan instance
+/// bersama ApiService, TokenStore, dan service domain.
 class Services {
   Services._();
   static final Services I = Services._();
 
-  /// Navigator global agar 401 dari mana pun mengarahkan ke login tanpa akses
-  /// [BuildContext] di lapisan service (doc 08 §2).
-  final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+  late final TokenStore tokens;
+  late final ApiService api;
+  late final AuthService auth;
+  late final CaregiverService caregiver;
+  late final RentalService rental;
+  late final OrderService order;
+  late final ChatService chat;
+  late final NotificationService notification;
+  late final WalletService wallet;
 
-  /// Diisi root app: cara kembali ke layar login setelah sesi habis.
-  void Function()? onSessionExpired;
+  /// Callback opsional yang dipasang UI untuk menangani logout paksa (401).
+  void Function()? onUnauthenticated;
 
-  final TokenStore tokens = const TokenStore();
+  bool _initialized = false;
 
-  late final ApiService api = ApiService(
-    baseUrl: Env.apiBase,
-    tokens: tokens,
-    onUnauthenticated: _handleUnauthenticated,
-  );
-
-  late final AuthService auth = AuthService(api, tokens);
-  late final BookingsService bookings = BookingsService(api);
-  late final CatalogService catalog = CatalogService(api);
-  late final NotificationsService notifications = NotificationsService(api);
-  late final WalletService wallet = WalletService(api);
-
-  /// Chat memegang koneksi WS; buat baru bila dibutuhkan layar chat.
-  ChatService newChatService() => ChatService(api);
-
-  /// Callback saat 401 (token invalid/kedaluwarsa): sesi sudah dibersihkan
-  /// [ApiService]; arahkan ke login (doc 02 §3).
-  Future<void> _handleUnauthenticated() async {
-    onSessionExpired?.call();
+  void init() {
+    if (_initialized) return;
+    tokens = TokenStore();
+    api = ApiService(
+      baseUrl: Env.apiBase,
+      tokens: tokens,
+      onUnauthenticated: () async => onUnauthenticated?.call(),
+    );
+    auth = AuthService(api, tokens);
+    caregiver = CaregiverService(api);
+    rental = RentalService(api);
+    order = OrderService(api);
+    chat = ChatService(api);
+    notification = NotificationService(api);
+    wallet = WalletService(api);
+    _initialized = true;
   }
 }

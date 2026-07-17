@@ -27,6 +27,8 @@ services:
       - "3000:3000"
     environment:
       - WAHA_API_KEY=ec8110ea9d1343e69c1191e13b22b81f
+      - WAHA_DASHBOARD_USERNAME=admin
+      - WAHA_DASHBOARD_PASSWORD=guntursuper123
     restart: unless-stopped
 
 volumes:
